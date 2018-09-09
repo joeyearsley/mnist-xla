@@ -79,7 +79,7 @@ def main(_):
         params = [v for v in tf.get_collection('trainable_variables')
                   if v.name.startswith('v%s/' % device_num)]
 
-        opt = tf.train.GradientDescentOptimizer(0.01)
+        opt = tf.train.GradientDescentOptimizer(0.1)
         optimisers.append(opt)
 
         grads = opt.compute_gradients(cross_entropy, params)
@@ -109,7 +109,7 @@ def main(_):
 
 
   config = tf.ConfigProto()
-  jit_level = 0
+  config.gpu_options.allow_growth = True
   if FLAGS.xla:
     # Turns on XLA JIT compilation.
     jit_level = tf.OptimizerOptions.ON_1
@@ -145,7 +145,7 @@ def main(_):
   for i in range(FLAGS.train_loops):
     # Create a timeline for the last loop and export to json to view with
     # chrome://tracing/.
-    if i == train_loops - 1:
+    if i == FLAGS.train_loops - 1:
       sess.run([loss, train_step],
                feed_dict=training_feed_dict,
                options=tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE),
@@ -157,13 +157,14 @@ def main(_):
       l, _ = sess.run([loss, train_step], feed_dict=training_feed_dict)
       loss_agg[i % loss_window] = l
 
-      print('Loss: {} /r'.format(np.mean(loss_agg)))
-  # Test trained model
+      print('Step: {}/{} Loss: {}'.format(i, FLAGS.train_loops, np.mean(loss_agg)), end="\r")
+  # Print loss as it's overwritten in log
+  print('Loss: {}'.format(np.mean(loss_agg)))
   # Change dataset to test version
-
   # Assign training = false
   sess.run([tf.get_collection('test_iterator_inits'), training.assign(False)])
-  print(sess.run(accuracy, feed_dict=test_feed_dict))
+  #for 
+  print('Accuracy:', sess.run(accuracy, feed_dict=test_feed_dict))
   sess.close()
 
 

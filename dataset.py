@@ -78,7 +78,7 @@ def download(directory, filename):
   return filepath
 
 
-def dataset(directory, images_file, labels_file):
+def dataset(directory, images_file, labels_file, batch_size=512):
   """Download and parse MNIST dataset."""
 
   images_file = download(directory, images_file)
@@ -103,18 +103,19 @@ def dataset(directory, images_file, labels_file):
       images_file, 28 * 28, header_bytes=16).map(decode_image)
   labels = tf.data.FixedLengthRecordDataset(
       labels_file, 1, header_bytes=8).map(decode_label)
-  return tf.data.Dataset.zip((images, labels)).apply(
-            tf.contrib.data.shuffle_and_repeat(200)).batch(32)
+  return tf.data.Dataset.zip((images, labels)).batch(batch_size)
 
 def train(directory):
   """tf.data.Dataset object for MNIST training data."""
   return dataset(directory, 'train-images-idx3-ubyte',
-                 'train-labels-idx1-ubyte')
+                 'train-labels-idx1-ubyte').apply(
+            tf.contrib.data.shuffle_and_repeat(200))
 
 
 def test(directory):
   """tf.data.Dataset object for MNIST test data."""
-  return dataset(directory, 't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte')
+  return dataset(directory, 't10k-images-idx3-ubyte',
+                 't10k-labels-idx1-ubyte', batch_size=10000)
 
 def get_iterators(train_directory, test_directory):
   dataset = {'training': None, 'test': None}
