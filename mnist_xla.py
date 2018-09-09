@@ -141,8 +141,9 @@ def main(_):
   train_step = tf.group(training_ops)
   loss = tf.reduce_mean(losses)
 
-  train_loops = 2000
-  for i in range(train_loops):
+  loss_window = 200
+  loss_agg = np.zeros(loss_window)
+  for i in range(FLAGS.train_loops):
     # Create a timeline for the last loop and export to json to view with
     # chrome://tracing/.
     if i == train_loops - 1:
@@ -154,9 +155,10 @@ def main(_):
       with open('timeline.ctf.json', 'w') as trace_file:
         trace_file.write(trace.generate_chrome_trace_format())
     else:
-      print(FLAGS.xla)
-      print('LOSS: ', sess.run([loss, train_step], feed_dict=training_feed_dict))
+      l, _ = sess.run([loss, train_step], feed_dict=training_feed_dict)
+      loss_agg[i % loss_window] = l
 
+      print('Loss: {} /r'.format(np.mean(loss_agg)))
   # Test trained model
   # Change dataset to test version
 
@@ -175,5 +177,7 @@ if __name__ == '__main__':
       help='Directory for storing input data')
   parser.add_argument(
       '--xla', type=bool, default=False, help='Turn xla via JIT on')
+  parser.add_argument(
+      '--train_loops', type=int, default=1000, help='How many training steps to do')
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
